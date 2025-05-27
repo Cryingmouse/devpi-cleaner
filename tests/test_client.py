@@ -6,7 +6,7 @@ from mock import Mock
 
 from devpi_plumber.client import DevpiCommandWrapper
 
-from devpi_cleaner.client import list_packages_by_index, remove_packages, Package
+from src.devpi_cleaner import list_packages_by_index, remove_packages, Package
 
 
 class ListTests(unittest.TestCase):

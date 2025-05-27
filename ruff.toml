@@ -1,0 +1,112 @@
+########################################
+#       Section: Basic Settings
+########################################
+
+# Exclude commonly ignored directories
+exclude = [
+    ".git",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    ".coverage",
+    "__pycache__",
+    "build",
+    "dist",
+]
+
+# Code style configuration (Black-compatible)
+line-length = 120
+indent-width = 4
+
+# Auto-fix settings
+fix = true
+# Enumerate all fixed violations.
+show-fixes = true
+
+# Allow imports relative to the "src" and "test" directories.
+src = ["src", "tests"]
+
+########################################
+#       Section: analyze
+########################################
+[analyze]
+detect-string-imports = true
+
+########################################
+#       Section: Linting
+########################################
+[lint]
+preview = true
+# Enabled checkers and rules
+select = [
+    "YTT", # flake8-2020
+    "S", # flake8-bandit
+    "B", # flake8-bugbear
+    "A", # flake8-builtins
+    "C4", # flake8-comprehensions
+    "T10", # flake8-debugger
+    "SIM", # flake8-simplify
+    "I", # isort
+    "D", # Enable all `pydocstyle` rules
+    "DOC", # Enable all `pydoclint` rules
+    "C90", # mccabe
+    "E", "W", # pycodestyle
+    "F", # pyflakes
+    "PGH", # pygrep-hooks
+    "RUF", # ruff
+    "G", # flake8-logging-format
+]
+
+extend-select = ["D401"] # Add `D401` to the existing `select` rules
+
+ignore = [
+    "E501", # LineTooLong
+    "E731", # DoNotAssignLambda
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+    "D106",
+    "D107",
+    "DOC201",
+    "DOC502",
+    "S101",
+    "S105",
+    "S404",
+    "S602",
+    "PLR0913", # Allow functions with many arguments
+]
+
+# Auto-fix configuration
+fixable = ["ALL"]  # Enable fixes for all rules
+unfixable = []
+
+# Allow unused variables with underscore prefixes
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[lint.per-file-ignores]
+"tests/*" = ["S101"]
+
+# Docstring style configuration
+[lint.pydocstyle]
+convention = "google"
+
+[lint.isort]
+case-sensitive = true
+force-single-line = true
+
+########################################
+#       Section: Formatting
+########################################
+[format]
+# Black-compatible formatting
+preview = true
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = true
+docstring-code-format = true
+docstring-code-line-length = 120
+line-ending = "lf"

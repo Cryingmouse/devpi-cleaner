@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-from __future__ import print_function, division
+from __future__ import division
+from __future__ import print_function
 
 import argparse
 import collections
@@ -63,7 +64,7 @@ class Artefact(object):
 
     @property
     def size(self):
-        """ Get the artefact's size in bytes """
+        """Get the artefact's size in bytes"""
         return path.getsize(self.path)
 
 
@@ -88,7 +89,7 @@ def generate_report(artefacts):
     size_by_package = collections.defaultdict(int)
 
     for artefact in artefacts:
-        size_by_package[(artefact.user, artefact.name)] += artefact.size
+        size_by_package[artefact.user, artefact.name] += artefact.size
 
     packages_sorted_by_size = sorted(size_by_package.items(), key=lambda x: x[1], reverse=True)
 
@@ -100,8 +101,7 @@ def generate_report(artefacts):
 
 
 def assert_devpi_data_dir(directory):
-    """ Crude heuristic to check that this is actually a Devpi data directory. """
-
+    """Crude heuristic to check that this is actually a Devpi data directory."""
     if not path.isfile(path.join(directory, '.serverversion')):
         logging.error("Failed to find Devpi's server version in %s.", directory)
         sys.exit(1)

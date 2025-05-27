@@ -1,0 +1,33 @@
+requires = ["tox>=4"]
+env_list = ["py311", "code", "doc"]
+
+[env_run_base]
+skip_install = true
+pass_env = ["PYTHON_VERSION"]
+allowlist_externals = ["uv"]
+deps = ["uv"]
+commands = [
+    ["uv", "sync", "--python", "{envpython}"],
+]
+
+[env.py311]
+description = "Run unit tests on Python 3.11."
+base_python = ["python3.11"]
+commands = [
+    ["uv", "run", "pytest", "--doctest-modules", "--cov=devpi_cleaner", "--cov-config=pyproject.toml", "--cov-report=html", "tests"],
+]
+
+[env.code]
+description = "Run code style checks with Ruff and Mypy."
+base_python = ["python3.11"]
+commands = [
+    ["uv", "run", "ruff", "check", "--fix", "--exit-non-zero-on-fix", "src"],
+    ["uv", "run", "mypy", "src"],
+]
+
+[env.doc]
+description = "Run doc style check with markdownlint."
+base_python = ["python3.11"]
+commands = [
+    ["uv", "run", "pymarkdown", "scan", "--recurse", "./docs"],
+]

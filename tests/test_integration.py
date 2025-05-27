@@ -10,7 +10,7 @@ import six
 
 from devpi_plumber.server import TestServer
 
-from devpi_cleaner.cli import main
+from src.devpi_cleaner import main
 
 TEST_USER = 'user'
 TEST_PASSWORD = 'password'
