@@ -15,13 +15,28 @@ _TAR_GZ_END = ".tar.gz"
 _TAR_BZ2_END = ".tar.bz2"
 _ZIP_END = ".zip"
 _WHL_END = ".whl"
-_EGG_END = ".egg"
+
+PACKAGE_EXTENSIONS = (_TAR_GZ_END, _TAR_BZ2_END, _ZIP_END, _WHL_END)
 
 
 def _extract_name_and_version(filename: str) -> Tuple[str, str]:
+    """Extract the package name and version from a filename.
+
+    Args:
+        filename (str): The name of the package file.
+
+    Returns:
+        Tuple[str, str]: A tuple containing the package name and version.
+
+    Raises:
+        NotImplementedError: If the package type is unknown.
+    """
     path = Path(filename)
-    if path.suffix == _WHL_END or path.suffix == _EGG_END:
-        return tuple(path.stem.split("-")[:2])
+    if path.suffix in (_WHL_END,):
+        parts = path.stem.split("-")[:2]
+        if len(parts) != 2:
+            raise NotImplementedError(f"Cannot extract name and version from {filename}.")
+        return tuple(parts)  # noqa: return-value
 
     parts = filename.rsplit("-", 1)
     if len(parts) < 2 or not parts[1][0].isdigit():
@@ -31,7 +46,7 @@ def _extract_name_and_version(filename: str) -> Tuple[str, str]:
     else:
         name, version_and_ext = parts
 
-    for extension in (_TAR_GZ_END, _TAR_BZ2_END, _ZIP_END):
+    for extension in PACKAGE_EXTENSIONS:
         if version_and_ext.endswith(extension):
             return name, version_and_ext[: -len(extension)]
 
@@ -67,6 +82,18 @@ class Package:
 def _list_packages_on_index(
     client, index: str, package_spec: str, only_dev: bool, version_filter: Optional[str]
 ) -> Set[Package]:
+    """List all packages on a specific index that match the given criteria.
+
+    Args:
+        client: The Devpi client instance.
+        index (str): The index to list packages from.
+        package_spec (str): The package specification.
+        only_dev (bool): Whether to only include development packages.
+        version_filter (Optional[str]): The regular expression to filter versions.
+
+    Returns:
+        Set[Package]: A set of Package objects that match the criteria.
+    """
     version_filter_pattern: Optional[Pattern[str]] = re.compile(version_filter) if version_filter else None
 
     def selector(package: Package) -> bool:
@@ -88,6 +115,15 @@ def _list_packages_on_index(
 
 
 def _get_indices(client, index_spec: str) -> List[str]:
+    """Get a list of indices based on the index specification.
+
+    Args:
+        client: The Devpi client instance.
+        index_spec (str): The index specification.
+
+    Returns:
+        List[str]: A list of index names.
+    """
     spec_parts = index_spec.split("/")
     return [index_spec] if len(spec_parts) > 1 else client.list_indices(user=index_spec)
 
@@ -95,6 +131,18 @@ def _get_indices(client, index_spec: str) -> List[str]:
 def list_packages_by_index(
     client, index_spec: str, package_spec: str, only_dev: bool, version_filter: Optional[str]
 ) -> Dict[str, Set[Package]]:
+    """List all packages by index that match the given criteria.
+
+    Args:
+        client: The Devpi client instance.
+        index_spec (str): The index specification.
+        package_spec (str): The package specification.
+        only_dev (bool): Whether to only include development packages.
+        version_filter (Optional[str]): The regular expression to filter versions.
+
+    Returns:
+        Dict[str, Set[Package]]: A dictionary mapping index names to sets of Package objects.
+    """
     return {
         index: _list_packages_on_index(client, index, package_spec, only_dev, version_filter)
         for index in _get_indices(client, index_spec)
@@ -102,9 +150,20 @@ def list_packages_by_index(
 
 
 def get_index_queue_size(metrics: List[Tuple[str, ...]]) -> int:
+    """Get the size of the Devpi web Whoosh index queue.
+
+    Args:
+        metrics (List[Tuple[str, ...]]): A list of metrics tuples.
+
+    Returns:
+        int: The size of the index queue.
+    """
     for metric_name, _, value in metrics:
         if metric_name == "devpi_web_whoosh_index_queue_size":
-            return value
+            try:
+                return int(value)
+            except ValueError:
+                return 0
     return 0
 
 
@@ -125,10 +184,12 @@ def wait_for_sync(client) -> None:
 
 
 def remove_package(client, package: Package) -> None:
+    """Remove a single package from the Devpi server."""
     client.remove("--index", package.index, f"{package.name}=={package.version}")
 
 
 def remove_packages(client, index: str, packages: List[Package], force: bool) -> None:
+    """Remove multiple packages from a specific index on the Devpi server."""
     with volatile_index(client, index, force):
         for package in packages:
             assert package.index == index
