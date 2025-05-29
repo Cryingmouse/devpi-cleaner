@@ -2,14 +2,6 @@
 Devpi Cleaner
 =============
 
-.. image:: https://coveralls.io/repos/blue-yonder/devpi-cleaner/badge.svg?branch=master
-    :alt: Coverage Status
-    :target: https://coveralls.io/r/blue-yonder/devpi-cleaner?branch=master
-.. image:: https://badge.fury.io/py/devpi-cleaner.svg
-    :alt: Latest Version
-    :target: https://pypi.python.org/pypi/devpi-cleaner
-
-
 Léon, the devpi cleaner, enables batch removal of artefacts from a `devpi server`_. Given a package and version
 specification, it will remove the specified versions of a package from either a single index or all indices of a given
 user.
@@ -75,12 +67,3 @@ Commandline Usage
 
     The arguments --dev-only and --version-filter can be combined. In this case
     only packages passing both filters will be removed.
-
-License
-=======
-
-`New BSD`_
-
-
-.. _devpi server: http://doc.devpi.net/latest/
-.. _New BSD: https://github.com/blue-yonder/devpi-cleaner/blob/master/COPYING

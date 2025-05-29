@@ -1,4 +1,3 @@
-# coding=utf-8
 import re
 import time
 from pathlib import Path
@@ -10,13 +9,19 @@ from typing import Set
 from typing import Tuple
 
 from devpi_plumber.client import volatile_index
+from packaging.version import Version
+from tenacity import retry
+from tenacity import retry_if_result
+from tenacity import stop_after_delay
+from tenacity import wait_fixed
 
 _TAR_GZ_END = ".tar.gz"
 _TAR_BZ2_END = ".tar.bz2"
 _ZIP_END = ".zip"
 _WHL_END = ".whl"
+_EGG_END = ".egg"
 
-PACKAGE_EXTENSIONS = (_TAR_GZ_END, _TAR_BZ2_END, _ZIP_END, _WHL_END)
+PACKAGE_EXTENSIONS = (_TAR_GZ_END, _TAR_BZ2_END, _ZIP_END, _EGG_END)
 
 
 def _extract_name_and_version(filename: str) -> Tuple[str, str]:
@@ -32,7 +37,7 @@ def _extract_name_and_version(filename: str) -> Tuple[str, str]:
         NotImplementedError: If the package type is unknown.
     """
     path = Path(filename)
-    if path.suffix in (_WHL_END,):
+    if path.suffix in (_WHL_END, _EGG_END):
         parts = path.stem.split("-")[:2]
         if len(parts) != 2:
             raise NotImplementedError(f"Cannot extract name and version from {filename}.")
@@ -80,7 +85,7 @@ class Package:
 
 
 def _list_packages_on_index(
-    client, index: str, package_spec: str, only_dev: bool, version_filter: Optional[str]
+    client, index: str, package_spec: str, only_dev: bool, version_filter: Optional[str], keep_latest: int = 0
 ) -> Set[Package]:
     """List all packages on a specific index that match the given criteria.
 
@@ -90,6 +95,7 @@ def _list_packages_on_index(
         package_spec (str): The package specification.
         only_dev (bool): Whether to only include development packages.
         version_filter (Optional[str]): The regular expression to filter versions.
+        keep_latest (int): The maximum number of the latest packages to keep.
 
     Returns:
         Set[Package]: A set of Package objects that match the criteria.
@@ -111,7 +117,9 @@ def _list_packages_on_index(
         if package_url.startswith(("http://", "https://"))
     }
 
-    return set(filter(selector, all_packages))
+    sorted_packages = sorted((p for p in all_packages if selector(p)), key=lambda p: Version(p.version), reverse=True)
+
+    return set(sorted_packages[max(keep_latest, 0) :])
 
 
 def _get_indices(client, index_spec: str) -> List[str]:
@@ -129,7 +137,7 @@ def _get_indices(client, index_spec: str) -> List[str]:
 
 
 def list_packages_by_index(
-    client, index_spec: str, package_spec: str, only_dev: bool, version_filter: Optional[str]
+    client, index_spec: str, package_spec: str, only_dev: bool, version_filter: Optional[str], keep_latest: int = 0
 ) -> Dict[str, Set[Package]]:
     """List all packages by index that match the given criteria.
 
@@ -139,13 +147,21 @@ def list_packages_by_index(
         package_spec (str): The package specification.
         only_dev (bool): Whether to only include development packages.
         version_filter (Optional[str]): The regular expression to filter versions.
+        keep_latest (int): The maximum number of the latest packages to keep.
 
     Returns:
         Dict[str, Set[Package]]: A dictionary mapping index names to sets of Package objects.
     """
     return {
-        index: _list_packages_on_index(client, index, package_spec, only_dev, version_filter)
-        for index in _get_indices(client, index_spec)
+        index: _list_packages_on_index(
+            client=client,
+            index=index,
+            package_spec=package_spec,
+            only_dev=only_dev,
+            version_filter=version_filter,
+            keep_latest=keep_latest,
+        )
+        for index in _get_indices(client=client, index_spec=index_spec)
     }
 
 
@@ -167,31 +183,30 @@ def get_index_queue_size(metrics: List[Tuple[str, ...]]) -> int:
     return 0
 
 
-def wait_for_sync(client) -> None:
-    """Wait for Devpi replicas to be in sync after deletion."""
-    start = time.time()
-    while time.time() < start + 1800:  # up to 30 minutes
-        status = client.get_json("/+status")["result"]
-        last_in_sync = float(status.get("replica-in-sync-at", time.time()))
-        indexer_queue_size = get_index_queue_size(status.get("metrics", []))
-        if last_in_sync > time.time() - 60 and indexer_queue_size < 100:
-            # We are neither talking to a lagging replica nor is the instance
-            # swamped with items to index. Should be fine to add some load.
-            return
-        # Wait for Devpi to catch up
-        time.sleep(10)
-    # At some point we just have to continue, maybe we are lucky and this goes through
+def _should_retry(result: tuple) -> bool:
+    """Determine if we need to retry based on status check results."""
+    last_in_sync_ok, queue_size_ok = result
+    return not (last_in_sync_ok and queue_size_ok)
 
 
-def remove_package(client, package: Package) -> None:
-    """Remove a single package from the Devpi server."""
-    client.remove("--index", package.index, f"{package.name}=={package.version}")
+@retry(stop=stop_after_delay(1800), wait=wait_fixed(10), retry=retry_if_result(_should_retry))
+def wait_for_sync(client) -> tuple[bool, bool]:
+    """Check synchronization status and return tuple of conditions."""
+    status = client.get_json("/+status")["result"]
+    current_time = time.time()
+
+    last_in_sync = float(status.get("replica-in-sync-at", current_time))
+    last_in_sync_ok = last_in_sync > current_time - 60
+
+    metrics = status.get("metrics", [])
+    queue_size_ok = get_index_queue_size(metrics) < 100
+
+    return last_in_sync_ok, queue_size_ok
 
 
-def remove_packages(client, index: str, packages: List[Package], force: bool) -> None:
+def remove_package(client, index: str, package: Package, force: bool) -> None:
     """Remove multiple packages from a specific index on the Devpi server."""
     with volatile_index(client, index, force):
-        for package in packages:
-            assert package.index == index
-            wait_for_sync(client)
-            remove_package(client, package)
+        assert package.index == index
+        wait_for_sync(client)
+        client.remove("--index", package.index, f"{package.name}=={package.version}")
