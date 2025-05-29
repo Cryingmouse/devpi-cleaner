@@ -1,8 +1,8 @@
 [project]
 name = "devpi-cleaner"
-description = "Devpi cleaner wraps the original devpi remove command."
-license = "Apache-2.0"
-authors = [{ name = "jay.xu", email = "cryingmouse@google.com" }]
+description = "Enables batch removal of packages from a devpi server."
+license = "new BSD"
+authors = [{ name = "Matthias Bach", email = "matthias.bach@blue-yonder.com" }]
 readme = "README.md"
 keywords = ["Devpi cleaner"]
 classifiers = [
@@ -12,11 +12,12 @@ classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Topic :: Utilities",
     "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dynamic = ["version"]
 dependencies = [
     "click>=8.2.1",
