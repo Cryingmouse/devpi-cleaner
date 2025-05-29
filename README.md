@@ -23,7 +23,6 @@ The following command will delete all development packages preceding version 0.2
 the user::
 
     > devpi-cleaner http://localhost:2414/ user/index1 'delete_me<=0.2' --dev-only
-    Password:
     Packages to be deleted from user/index1:
      * delete_me 0.2.dev1 on user/index1
      * delete_me 0.2.dev2 on user/index1
@@ -34,36 +33,23 @@ the user::
 As shown, packages will be listed and confirmation required before they are actually deleted from the server.
 
 Commandline Usage
+
 =================
-::
 
-    usage: devpi-cleaner [-h] [--batch] [--dev-only] [--version-filter REGEX]
-                         [--force] [--password PASSWORD] [--login LOGIN]
-                         server user[/index] package_specification
+    Usage: devpi-cleaner [OPTIONS] SERVER user[/index] PACKAGE_SPECIFICATION
 
-    A utility to batch-remove packages from a Devpi server.
-
-    positional arguments:
-      server                The devpi server to operate on.
-      user[/index]          The index from which to remove the packages. If only
-                            the user part is specified, all indices of that user
-                            will be cleaned.
-      package_specification
-                            The specification of the package version(s) to remove.
-
-    optional arguments:
-      -h, --help            show this help message and exit
-      --batch               Assume yes on confirmation questions.
-      --dev-only            Remove only development versions as specified by PEP
-                            440.
-      --version-filter REGEX
-                            Remove only versions in which the given regular
-                            expression can be found.
-      --force               Temporarily make indices volatile to enable package
-                            removal.
-      --password PASSWORD   The password with which to authenticate.
-      --login LOGIN         The user name to user for authentication. Defaults to
-                            the user of the indices to operate on.
-
-    The arguments --dev-only and --version-filter can be combined. In this case
-    only packages passing both filters will be removed.
+    Options:
+      --keep-latest INTEGER   Number of latest versions to retain after applying
+                              filters. Older versions beyond this count will be
+                              removed.
+      --batch                 Assume yes on confirmation questions.
+      --dev-only              Remove only development versions as specified by PEP
+                              440.
+      --version-filter REGEX  Remove only versions in which the given regular
+                              expression can be found.
+      --force                 Temporarily make indices volatile to enable package
+                              removal.
+      --login TEXT            The user name to user for authentication. Defaults
+                              to the user of the indices to operate on.
+      --password TEXT         The password with which to authenticate.
+      --help                  Show this message and exit.

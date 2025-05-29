@@ -29,7 +29,6 @@ dependencies = [
 # Add console script entry point
 [project.scripts]
 devpi-cleaner = "devpi_cleaner.cli:clean_devpi_packages"
-devpi-package-stat = "devpi_cleaner.cli:get_devpi_package_stats"
 
 # Section: Dependency Groups
 [dependency-groups]
